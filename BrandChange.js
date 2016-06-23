@@ -39,13 +39,6 @@ var REPORT = {
 	},
 }
 
-// progressBar = new Window('window', 'Progress');
-// with(progressBar) {
-// 	progressBar.myProgressBar = add('progressbar', [0, 0, 400, 50], 0, 100);
-// }
-// progressBar.show();
-// $.writeln(progressBar.toSource())
-// exit()
 
 //show dialog
 var brandSelector = ShowMainDialog( assetsRoot, '', null );
