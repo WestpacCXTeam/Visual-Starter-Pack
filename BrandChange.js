@@ -39,16 +39,68 @@ var REPORT = {
 	},
 }
 
+/**
+ * Try to guess current brand and store in properties
+ *
+ * @type {Object}
+ */
+var CurrentBrand = {
+	/**
+	 * The place we store the current brand globally
+	 *
+	 * @type {String}
+	 */
+	ThisBrand: '',
+
+	/*
+	 * GetCurrentBrand
+	 *
+	 * @param  assetsRoot  {array}   All brand root folder strings
+	 */
+	get: function( assetsRoot ) {
+		var links = app.activeDocument.links; //get all asset links from the doc
+		var currentBrand = ''; //the brand to be determined
+
+		if( links.length > 0 ) { //if there are assets on the page
+			var path = links[0].filePath; //just look at each link one to sniff out what brand we are in.
+
+			for(var property in assetsRoot) {
+				if( assetsRoot.hasOwnProperty( property ) ) {
+					var _hasString = path.indexOf( ':' + assetsRoot[ property ] );
+
+					if( _hasString > 1 ) {
+						currentBrand = property;
+					}
+				}
+			}
+		}
+
+		this.ThisBrand = currentBrand; //setting globally
+	},
+};
+
+
+CurrentBrand.get( assetsRoot ); //try to guess current brand
+
 
 //show dialog
-var brandSelector = ShowMainDialog( assetsRoot, '', null );
+var brandSelector = ShowMainDialog( CurrentBrand, assetsRoot, '', null );
 var importDlg = brandSelector.show();
 
 
 //Getting current brand ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 if(importDlg == true) { //if dialog has been clicked
-	var currentBrand = GetCurrentBrand( assetsRoot );
+	var thisBrand = '';
 	var brand = '';
+
+	for(var brandName in allBrands) { //checking what we selected for current brand
+		var _active = brandSelector.currentBrands[ 'currentBrandRadios' + allBrands[ brandName ] ].value;
+
+		if(_active == true) {
+			thisBrand = allBrands[ brandName ];
+		}
+	}
+	CurrentBrand.ThisBrand = currentBrand = thisBrand; //set the current brand globally
 
 	for(var brandName in allBrands) { //why do I have to do this? Please give me the value of the radio button selection
 		if( allBrands[ brandName ] != currentBrand ) {
@@ -99,13 +151,13 @@ if(importDlg == true) { //if dialog has been clicked
 //Show progress bar ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				progressBar = new Window('window', 'Progress');
 				with(progressBar) {
-					progressBar.myProgressBar = add('progressbar', [0, 0, 400, 50], 0, 100);
+					progressBar.myProgressBar = add('progressbar', [0, 0, 400, 24], 0, 100);
 				}
 				progressBar.show(); //open progress bard window
 
 				var location = progressBar.location + ''; //update the progressbar position
 				location = location.split(',');
-				progressBar.location = location[0] + ',' + ( location[1] - 200 );
+				progressBar.location = location[0] + ',' + ( location[1] - 250 );
 				progressBar.visible = true;
 
 
@@ -113,7 +165,7 @@ if(importDlg == true) { //if dialog has been clicked
 
 
 //Ask for Starter Pack location ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				var secondDialog = ShowMainDialog( assetsRoot, brand, starterPack );
+				var secondDialog = ShowMainDialog( CurrentBrand, assetsRoot, brand, starterPack );
 				var secondDialogReturn = secondDialog.show(); //show dialog again this time with the options filled in
 
 				if(secondDialogReturn == true) { //second dialog has not been canceled
@@ -321,17 +373,50 @@ if(importDlg == true) { //if dialog has been clicked
 /*
  * ShowMainDialog
  *
- * @param  assetsRoot  {array}   All brand root folder strings
- * @param  brand       {string}  Brand to be selected
- * @param  SPpath      {string}  Path to Stater Pack
+ * @param  CurrentBrand  {object}  The current brand from our global var
+ * @param  assetsRoot    {array}   All brand root folder strings
+ * @param  brand         {string}  Brand to be selected
+ * @param  SPpath        {string}  Path to Stater Pack
  */
-function ShowMainDialog( assetsRoot, brand, SPpath ) {
-	var brandSelector = new Window('dialog', 'Brand switcher');
-	var currentBrand = GetCurrentBrand( assetsRoot );
+function ShowMainDialog( CurrentBrand, assetsRoot, brand, SPpath ) {
+	var brandSelector = new Window('dialog', 'BRAND SWITCHER');
+	var currentBrand = CurrentBrand.ThisBrand;
 
 	with(brandSelector) {
+
+		brandSelector.srcFileTxt = add('statictext', undefined, '_________________________ SWITCH THE BRAND _______________________');
+		brandSelector.srcFileTxt.alignment = 'center';
+		brandSelector.srcFileTxt = add('statictext', undefined, 'Like switching Vegemite to Marmite');
+		brandSelector.srcFileTxt.alignment = 'center';
+		brandSelector.srcFileTxt = add('statictext', undefined, '');
+
 		brandSelector.alignChildren = 'left';
-		brandSelector.srcFileTxt = add('statictext', undefined, 'Switch this ' + currentBrand + ' design to another brand. Like switching Vegemite to Marmite! ');
+
+		brandSelector.currentBrands = add('group');
+		brandSelector.currentBrands.orientation = 'column';
+		brandSelector.currentBrands.alignment = 'fill';
+		brandSelector.currentBrands.alignChildren = 'left';
+		brandSelector.currentBrands.srcFileTxt = add('statictext', undefined, '1. Please select the brand this document is in.');
+
+		if( brand === '' || CurrentBrand.ThisBrand === '' ) {
+			for(var property in assetsRoot) {
+				if( assetsRoot.hasOwnProperty( property ) ) {
+					brandSelector.currentBrands[ ('currentBrandRadios' + property) ] = add('radioButton', undefined, property, { name: property });
+					brandSelector.currentBrands[ ('currentBrandRadios' + property) ].alignment = 'fill';
+
+					if( property === currentBrand ) {
+						brandSelector.currentBrands[ ('currentBrandRadios' + property) ].value = true;
+					}
+				}
+			}
+		}
+		else {
+			brandSelector.currentBrands.srcFileTxt = add('statictext', undefined, currentBrand);
+		}
+
+
+		brandSelector.srcFileTxt = add('statictext', undefined, '');
+
 
 		brandSelector.brands = add('group');
 		brandSelector.brands.orientation = 'column';
@@ -339,7 +424,7 @@ function ShowMainDialog( assetsRoot, brand, SPpath ) {
 		brandSelector.brands.alignChildren = 'left';
 
 		with(brandSelector.brands) {
-			brandSelector.brands.srcFileTxt = add('statictext', undefined, '1. Select a brand');
+			brandSelector.brands.srcFileTxt = add('statictext', undefined, '2. Select a brand');
 
 			if( brand !== '' ) {
 				brandSelector.brands.srcFileTxt = add('statictext', undefined, brand);
@@ -347,13 +432,15 @@ function ShowMainDialog( assetsRoot, brand, SPpath ) {
 			else {
 				for(var property in assetsRoot) {
 					if( assetsRoot.hasOwnProperty( property ) ) {
-						if( property != currentBrand ) {
-							brandSelector.brands[ ('brandRadios' + property) ] = add('radioButton', undefined, property, { name: property });
-						}
+						brandSelector.brands[ ('brandRadios' + property) ] = add('radioButton', undefined, property, { name: property });
 					}
 				}
 			}
 		}
+
+
+		brandSelector.srcFileTxt = add('statictext', undefined, '');
+
 
 		brandSelector.buttonGrp = add('group');
 		brandSelector.buttonGrp.orientation = 'row';
@@ -362,7 +449,7 @@ function ShowMainDialog( assetsRoot, brand, SPpath ) {
 		brandSelector.buttonGrp.alignChildren = 'left';
 
 		with(brandSelector.buttonGrp) {
-			brandSelector.buttonGrp.srcFileTxt = add('statictext', undefined, '2. Locate your GUI starter pack folder');
+			brandSelector.buttonGrp.srcFileTxt = add('statictext', undefined, '3. Locate your GUI starter pack folder');
 			if( SPpath == null ) {
 				brandSelector.buttonGrp.btnOK = add('button', undefined, 'Choose', { name: 'OK' });
 			}
@@ -386,30 +473,4 @@ function ShowMainDialog( assetsRoot, brand, SPpath ) {
 
 	brandSelector.center();
 	return brandSelector;
-}
-
-
-
-/*
- * GetCurrentBrand
- *
- * @param  assetsRoot  {array}   All brand root folder strings
- *
- * @return             {string}  Current brand as string
- */
-function GetCurrentBrand( assetsRoot ) {
-	var links = app.activeDocument.links; //get all asset links from the doc
-	var path = links[0].filePath; //just look at each link one to sniff out what brand we are in.
-
-	for(var property in assetsRoot) {
-		if( assetsRoot.hasOwnProperty( property ) ) {
-			var _hasString = path.indexOf( ':' + assetsRoot[ property ] );
-
-			if( _hasString > 1 ) {
-				var currentBrand = property;
-			}
-		}
-	}
-
-	return currentBrand;
 }

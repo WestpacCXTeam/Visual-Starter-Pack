@@ -54,6 +54,7 @@ If you have questions please let us know in [the issues](https://github.com/West
 
 ### Release History remote
 
+* v0.1.1 - Fixed brand guessing and added fallback
 * v0.1.0 - Initial setup
 
 **[⬆ back to top](#content)**
